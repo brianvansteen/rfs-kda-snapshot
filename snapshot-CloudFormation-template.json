@@ -15,6 +15,7 @@
                         "EnableAutoScaling",
                         "s3bucket",
                         "artifactName",
+                        "lambdaName",
                         "generateUsersTimer",
                         "pauseBetweenUserGeneration"
                     ]
@@ -37,10 +38,13 @@
                     "default": "Enable automatic scaling"
                 },
                 "s3bucket": {
-                    "default": "Name of the S3 bucket where application artifacts are"
+                    "default": "Name of the S3 bucket where application artifacts are uploaded"
                 },
                 "artifactName": {
-                    "default": "Name of the application artifact"
+                    "default": "Name of the Java application artifact"
+                },
+                "lambdaName": {
+                    "default": "Name of the Zip archive containing Lambda code"
                 },
                 "generateUsersTimer": {
                     "default": "How long to generate user data in seconds"
@@ -98,6 +102,9 @@
             "Type": "String"
         },
         "artifactName": {
+            "Type": "String"
+        },
+        "lambdaName": {
             "Type": "String"
         },
         "generateUsersTimer": {
@@ -652,8 +659,12 @@
                     }
                 },
                 "Code": {
-                    "S3Bucket": "583580523781-aleksejs-b",
-                    "S3Key": "kda_snapshot_manager.zip"
+                    "S3Bucket": {
+                        "Ref": "s3bucket"
+                    },
+                    "S3Key": {
+                        "Ref": "lambdaName"
+                    }
                 }
             }
         },
