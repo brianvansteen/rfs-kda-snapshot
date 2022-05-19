@@ -297,12 +297,21 @@ Additionally, we can also see the CloudWatch alarms that are set up.
 # Step 5: Review the Application, metrics, and logs
 
 ## KDA application page
+
 We can see information on Snapshots. In this screenshot, it can be seen that four automated Snapshots have been created every 10 minutes, as well as a snapshot from a user-generated application 'stop'.
+
 
 <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/10.png" /></p>
 
 
+Each time an EventBridge rule invokes the Lambda function to create a KDA Snapshot, a log entry will be generated as follows:
+
+
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/214.png" /></p>
+
+
 After the user-generated 'stop,' the demo application can be started again from the 'run' button. The latest Snapshot can be used for this application start, older snapshots, or without a snapshot.
+
 
 <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/11.png" /></p>
 
@@ -311,38 +320,38 @@ After the user-generated 'stop,' the demo application can be started again from 
 
 From the CloudFormation stack 'resources' tab, the log group and log stream results can be found. Using this information, you can access the  CloudWatch logs to monitor the demo application.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/18.png" /></p>
 
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/18.png" /></p>
 
 
 From CloudWatch Log Insights, and using the Log Group from the CloudFormation 'resources' tab, a query can be run to show when the demo application was started, in this screenshot, there are three records.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/12a.png" /></p>
 
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/12a.png" /></p>
 
 
 Looking at the detail of two log events, the top events show the demo application was restored from context (the application was re-started with state). The bottom event was when the demo application was first started, and there was no Snapshot and hence no state.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/107.jpg" /></p>
 
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/107.jpg" /></p>
 
 
 A query can also be run to show the number of events when the demo application created a random user. Each event prints a message for the number of users.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/9.png" /></p>
 
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/9.png" /></p>
 
 
 Looking at the detail of one log event, the message details the number of users (random user records) that the demo application has created.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/108.jpg" /></p>
 
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/108.jpg" /></p>
 
 
 Finally, we can explore the data in the DynamoDB table, which details the Lambda function activities for invoking the snapshot function. These activities are populated into a table.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/22.png" /></p>
 
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/22.png" /></p>
 
 
 The demo application name, the Snapshot name, and other data are listed for each item.
