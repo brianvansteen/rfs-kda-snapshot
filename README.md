@@ -1,16 +1,16 @@
 # Executive Summary
 To effectively manage a Flink Streaming Application on AWS Kinesis Data Analytics (KDA) and ensure high availability, Flink has two features. 
 
-The first is Checkpoints are fully automated in KDA and used to restart if there is a failure and a node is replaced in the underlying EKS cluster. 
+The first is Checkpoints that are fully automated in KDA and used to restart if there is a failure and a node is replaced in the underlying EKS cluster. 
 
 The second feature is Flink Savepoints, which KDA calls Snapshots. Savepoints are used to restart an application after it has been purposefully stopped or if there is a data problem and the user wants to restart the application from a previous point in time. These operations also need to be monitored to ensure they are completed and in a timely manner, as they impact application performance 
 
-Currently, some of these features are not managed by the KDA service and require implementation by each application team. This project provides an out-of-the-box solution to automate the KDA Snapshot process and monitoring.
+Currently, some of these features are not managed by the KDA service and require implementation by each application team. This project provides an out-of-the-box solution to automate the KDA Snapshot process and enable monitoring.
 
 # The Challenge
 The AWS KDA service fully automates the creation and management of Flink Checkpoints for High Availability, it creates and manages Snapshots when the application is shut down in an orderly fashion, and it provides an API to create Snapshots (Flink Savepoints) periodically. KDA also publishes CloudWatch metrics on Checkpoint and Snapshot completion and duration. 
 
-It is the responsibility of each application to implement the following features to achieve "Operational Readiness" to support and manage a streaming application in production.
+It is the responsibility of each application team to implement the following features to achieve "Operational Readiness" to support and manage a streaming application in production.
 
 1. Invoking the API for Snapshots periodically for application recovery. This is done to handle application-level issues that require restating the application from a known point in time if there is a non-recoverable error on the cluster for any reason.
 
@@ -26,7 +26,7 @@ Ness has created an accelerator in the form of a CloudFormation template, and Gi
 
 The accelerator consists of the following components:
 
-1. Lambda function automates the Snapshot creation process via a CloudWatch EventBridge rule, an SNS Topic. It uses DynamoDB table to create an audit trail. 
+1. Lambda function automates the Snapshot creation process being invoked by a CloudWatch EventBridge rule, and creating an SNS Topic. It uses a DynamoDB table to create an audit trail. 
 
 2. A demo KDA application is created that allows you to test the Lambda function and Cloudwatch dashboards and alarms. To validate the application is creating Snapshots, we have implemented logging in the sample application when a Savepoint is created to make it easy to do a demo. 
 
@@ -47,9 +47,9 @@ The accelerator consists of the following components:
 ## How the Demo Application works
 
 ### User Story
-As a developer, I want a simple Flink application that can be used to demonstrate Flink Snapshots so that we can see that it starts correctly and initializes state from the snapshot.
+As a developer, I want a simple Flink application that can be used to demonstrate Flink Savepoints (Snapshots) so that we can see that it starts correctly and initializes state from the Snapshot.
 
-* For demonstration purposes, the app generates random users with information (name and age). It tabulates statistics on the number of people of a certain age and the total number of users.
+* For demonstration purposes, the application generates random users with information (name and age). It tabulates statistics on the number of people of a certain age and the total number of users.
 * The application should create log entries to clarify when the application starts with and without a Snapshot and when a Snapshot is generated. 
 
 
@@ -58,13 +58,13 @@ As a developer, I want a simple Flink application that can be used to demonstrat
 
 2. Print a log entry when starting:
 
-- Starting without a Snapshot. “The application was not restored from context.”
+  - Starting without a Snapshot. “The application was not restored from context.”
 
-- Starting with a Snapshot. “The application was restored from context.” 
+  - Starting with a Snapshot. “The application was restored from context.” 
 
-- When a Snapshot is created, log: "Triggering Savepoint for job….” 
+  - When a Snapshot is created, log: "Triggering Savepoint for job….” 
 
-- Log what is in the value state (total records, sum values) 
+  - Log what is in the value state (total records, sum values) 
 
 
 <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/215.png" /></p>
@@ -83,11 +83,11 @@ The KDA Snapshot operation is automated based on an AWS EventBridge rule invokin
 
 Firstly, if the KDA application is not running, a Snapshot cannot be taking. At every time interval specified when a Snapshot is to be taken, the following message would then be received via SNS message, starting the Snapshot process is working as expected, but a Snapshot cannot be taken.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/216g.png</p>
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/216.png" /></p>
 
 Additionally, if the Snapshot process is not working correctly, the duration of each Snapshot could take longer than expected. The threshold for the alarm is 30 seconds, and so if the Snapshot is taking longer than this threshold, an SNS message would be sent as follows.
 
-<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/217.png/p>
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/217.png" /></p>
 
 From CloudWatch Log Insights, and using the Log Group from the CloudFormation 'resources' tab, a query can be run to show when the demo application was started; in this screenshot, there are three records.
 
@@ -127,7 +127,7 @@ If you have any feedback, please raise issues in the Github project and feel fre
 
 # Deployment Instructions
 
-The CloudFormation template will build:
+The CloudFormation template will:
 
 - Create a Kinesis Data Analytics platform with demo Java application
 - Create a Lambda function with required permission roles
@@ -143,13 +143,17 @@ Using a single CloudFormation template, we will deploy the necessary AWS service
 The CloudFormation template will also build AWS services, including a Lambda function, a CloudWatch dashboard with widgets, an SNS topic and a DynamoDB table to store the snapshotting events.
 
 ## The CloudFormation document takes the following parameters
+
   1. Log monitoring level → set to 'INFO' to see all events, such as each record that is created
   2. Monitoring level → set to 'APPLICATION' as this will provide logs for the demo application activities
   3. Service-triggered Snapshots → left as 'true' to allow Snapshots to be created. This can be changed for testing (if you set it to false, you will see in the metrics and logs snapshots will not be created, and you will get an alarm)
   4. Number of Snapshots to retain → AWS KDA will retain up to 1000 Snapshots, but for testing purposes, this can be left at 10, whereby after 10 Snapshots are created, the oldest Snapshot is deleted when each new Snapshot is created
   5. Scaling → This allows you to enable/disable autoscaling in KDA for testing, but for this demo you can always leave it as 'True', but it maybe a useful feature for deploying real applications.
-  6. How long to generate user data(test application) → the demo application creates random user information, and this will be done for X seconds, for example, 600 seconds or 10 minutes
-  7. Delay between data generation(test application) → the time in milliseconds between each random user data record created
+  6. S3 bucket → the name of the bucket where the files are located
+  7. Java application → the name of the JAR file created
+  8. Lambda code → the name of the Zip file with the Lambda cod
+  9. How long to generate user data(test application) → the demo application creates random user information, and this will be done for X seconds, for example, 600 seconds or 10 minutes
+  10. Delay between data generation(test application) → the time in milliseconds between each random user data record created
 
 
 ## Step 1
@@ -176,47 +180,45 @@ The CloudFormation template will also build AWS services, including a Lambda fun
   
   
   
-  On the next page of the CloudFormation creation process, enter a Stack name:
+On the next page of the CloudFormation creation process, enter a Stack name:
   
 <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/1.png" /></p>
   
+ 
+Below that, there are a number of parameters that can be defined for the CloudFormation stack:
   
-  
-  Below that, there are a number of parameters that can be defined for the CloudFormation stack:
-  
-    1. Log monitoring level → set to 'INFO' to see all events, such as each record that is created
-    2. Monitoring level → set to 'APPLICATION' as this will provide logs for the demo application activities
-    3. Service-triggered Snapshots → leave as 'true' to allow Snapshots to be created
-    4. Number of Snapshots to retain → AWS KDA will retain up to 1000 Snapshots, but for testing purposes, this can be left at 10, whereby after 10 Snapshots are created, the oldest Snapshot is deleted when each new Snapshot is created
-    5. Scaling → leave as 'true', which would allow the KDA application to scale
-    6. S3 bucket → the name of the bucket where the files are located
-    7. Java application → the name of the JAR file created
-    8. Lambda code → the name of the Zip file with the Lambda code
-    9. How long to generate user data → the demo application creates random user information, and this will be done for X seconds, for example, 600 seconds or 10 minutes
-    10. Delay between data generation → time in milliseconds between each random user data record created
+  1. Log monitoring level → set to 'INFO' to see all events, such as each record that is created
+  2. Monitoring level → set to 'APPLICATION' as this will provide logs for the demo application activities
+  3. Service-triggered Snapshots → leave as 'true' to allow Snapshots to be created
+  4. Number of Snapshots to retain → AWS KDA will retain up to 1000 Snapshots, but for testing purposes, this can be left at 10, whereby after 10 Snapshots are created, the oldest Snapshot is deleted when each new Snapshot is created
+  5. Scaling → This allows you to enable/disable autoscaling in KDA for testing, but for this demo you can always leave it as 'True', but it maybe a useful feature for deploying real applications.
+  6. S3 bucket → the name of the bucket where the files are located
+  7. Java application → the name of the JAR file created
+  8. Lambda code → the name of the Zip file with the Lambda code
+  9. How long to generate user data → the demo application creates random user information, and this will be done for X seconds, for example, 600 seconds or 10 minutes
+  10. Delay between data generation → time in milliseconds between each random user data record created
   
   
  
-  <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/211.png" /></p>
+<p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/211.png" /></p>
 
 
-  Below these parameters are the following three parameters:
+Below these parameters are the following three parameters:
   
-    1. CloudWatch dashboard name
-    2. Email address for SNS notifications
-    3. SNS topic name
-  
+  1. CloudWatch dashboard name
+  2. Email address for SNS notifications
+  3. SNS topic name
+
+
 <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/3.png" /></p>
   
 
-  On the next page of the CloudFormation creation process, set an IAM role to allow the CloudFormation process to create all necessary resources.
-  For the purpose of this demonstration, the role 'cloudformationKDA' has 'admin privileges'.
+On the next page of the CloudFormation creation process, set an IAM role to allow the CloudFormation process to create all necessary resources. For the purpose of this demonstration, the role 'cloudformationKDA' has 'admin privileges'.
   
 <p align="center"><img src="https://github.com/riskfocus/rfs-kda-snapshot/blob/master/Images/102.jpg" /></p>
   
   
-  
-  The CloudFormation stack can now be created.
+The CloudFormation stack can now be created.
 
 --------------------------------------------
 
